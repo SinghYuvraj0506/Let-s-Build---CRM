@@ -1,0 +1,206 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Icon {
+  settings
+  chart
+  calendar
+  check
+  chip
+  compass
+  database
+  flag
+  home
+  info
+  link
+  lock
+  messages
+  notification
+  payment
+  power
+  receipt
+  shield
+  star
+  tune
+  videorecorder
+  wallet
+  warning
+  headphone
+  send
+  pipelines
+  person
+  category
+  contact
+  clipboardIcon
+}
+
+
+enum Role {
+  AGENCY_OWNER
+  AGENCY_ADMIN
+  SUBACCOUNT_USER
+  SUBACCOUNT_GUEST
+}
+
+
+enum InvitationStatus {
+  ACCEPTED
+  REVOKED
+  PENDING
+}
+
+
+model User {
+  id    String   @id @default(uuid())
+  name  String
+  avatar_url   String
+  email   String @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime   @updatedAt
+  role  Role    @default(SUBACCOUNT_USER)
+  agencyId   String
+  Agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  Permissions  Permissions[]
+  Notification Notification[]
+  
+
+  @@index([agencyId])
+}
+
+model Permissions {
+  id           String     @id @default(uuid())
+  email        String
+  User         User       @relation(fields: [email], references: [email], onDelete: Cascade)
+  subAccountId String
+  SubAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  access       Boolean
+
+  @@index([subAccountId])
+  @@index([email])
+}
+
+
+model Agency {
+  id               String                @id @default(uuid())
+  connectAccountId String?               @default("")
+  customerId       String                @default("")
+  name             String
+  agencyLogo       String                @db.Text
+  companyEmail     String                @db.Text
+  companyPhone     String
+  whiteLabel       Boolean               @default(true)
+  address          String
+  city             String
+  zipCode          String
+  state            String
+  country          String
+  goal             Int                   @default(5)
+  users            User[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  SubAccount       SubAccount[]
+  SidebarOption    AgencySidebarOption[]
+  Invitation       Invitation[]
+  Notification     Notification[]
+  // Subscription     Subscription?
+  // AddOns           AddOns[]
+}
+
+
+model SubAccount {
+  id               String                    @id @default(uuid())
+  connectAccountId String?                   @default("")
+  name             String
+  subAccountLogo   String                    @db.Text
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  companyEmail     String                    @db.Text
+  companyPhone     String
+  goal             Int                       @default(5)
+  address          String
+  city             String
+  zipCode          String
+  state            String
+  country          String
+  agencyId         String
+  Agency           Agency                    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  Permissions      Permissions[]
+  SidebarOption    SubAccountSidebarOption[]
+  // Funnels          Funnel[]
+  // Media            Media[]
+  // Contact          Contact[]
+  // Trigger          Trigger[]
+  // Automation       Automation[]
+  // Pipeline         Pipeline[]
+  // Tags             Tag[]
+  Notification     Notification[]
+
+  @@index([agencyId])
+}
+
+
+model AgencySidebarOption {
+  id        String   @id @default(uuid())
+  name      String   @default("Menu")
+  link      String   @default("#")
+  icon      Icon     @default(info)
+  agencyId  String
+  Agency    Agency?  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+}
+
+model SubAccountSidebarOption {
+  id           String      @id @default(uuid())
+  name         String      @default("Menu")
+  link         String      @default("#")
+  icon         Icon        @default(info)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  SubAccount   SubAccount? @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  subAccountId String?
+
+  @@index([subAccountId])
+}
+
+
+model Invitation {
+  id           String      @id @default(uuid())
+  email       String    @unique
+  agencyId     String
+  Agency      Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  role        Role  @default(SUBACCOUNT_USER)
+  status      InvitationStatus @default(PENDING)
+
+  @@index([agencyId])
+}
+
+
+model Notification {
+  id           String  @id @default(uuid())
+  notification String
+  agencyId     String
+  subAccountId String?
+  userId       String
+
+  User       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Agency     Agency      @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  SubAccount SubAccount? @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+  @@index([subAccountId])
+  @@index([userId])
+}
