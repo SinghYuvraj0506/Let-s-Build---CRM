@@ -41,10 +41,13 @@ import Loading from "../global/loading";
 import {
   deleteAgency,
   generateNotificationLogs,
+  initUser,
   updateAgencyGoal,
+  upsertAgency,
 } from "@/lib/querries";
 import { useRouter } from "next/navigation";
 import { useToast } from "../ui/use-toast";
+import { v4 } from "uuid";
 
 interface Props {
   data?: Partial<Agency>;
@@ -75,7 +78,7 @@ const AgencyDetails = ({ data }: Props) => {
       agencyLogo: data?.agencyLogo,
       companyEmail: data?.companyEmail,
       companyPhone: data?.companyPhone,
-      whiteLabel: data?.whiteLabel,
+      whiteLabel: data?.whiteLabel ?? false,
       address: data?.address,
       city: data?.city,
       zipCode: data?.zipCode,
@@ -92,7 +95,43 @@ const AgencyDetails = ({ data }: Props) => {
     }
   }, [data]);
 
-  const onSubmit = () => {};
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      // updating the current user -------
+      const newUser = await initUser({ role: "AGENCY_OWNER" });
+      const response = await upsertAgency({
+        id: data?.id ? data.id : v4(),
+        address: values.address,
+        agencyLogo: values.agencyLogo,
+        city: values.city,
+        companyPhone: values.companyPhone,
+        country: values.country,
+        name: values.name,
+        state: values.state,
+        whiteLabel: values.whiteLabel,
+        zipCode: values.zipCode,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        companyEmail: values.companyEmail,
+        connectAccountId: "",
+        goal: 5,
+      });
+
+      if (response) {
+        toast({
+          title: "Created Agency",
+        });
+        return router.refresh();
+      }
+    } catch (error) {
+      console.log(error);
+      toast({
+        variant: "destructive",
+        title: "Oops!",
+        description: "Could not create your agency",
+      });
+    }
+  };
 
   const handleDeleteAgency = async () => {
     if (!data?.id) return;
@@ -104,7 +143,7 @@ const AgencyDetails = ({ data }: Props) => {
         title: "Deleted Agency",
         description: "Deleted you agency and all subaccounts",
       });
-      router.refresh()
+      router.refresh();
     } catch (error) {
       console.log(error);
       toast({

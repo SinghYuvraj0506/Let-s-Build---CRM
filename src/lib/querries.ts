@@ -148,7 +148,7 @@ export const verifyandAcceptInvitation = async () => {
       id: authUser?.id,
       email: authUser?.emailAddresses[0]?.emailAddress,
       name: authUser?.firstName + " " + authUser?.lastName,
-      avatar_url: authUser?.imageUrl,
+      avatarUrl: authUser?.imageUrl,
       agencyId: invitationExists?.agencyId,
       createdAt: new Date(),
       role: invitationExists?.role,
@@ -196,12 +196,101 @@ export const updateAgencyGoal = async (
   return response;
 };
 
-export const deleteAgency = async (
-  agencyId: string
-) => {
+export const deleteAgency = async (agencyId: string) => {
   const response = await db.agency.delete({
-    where: { id: agencyId }
+    where: { id: agencyId },
   });
 
   return response;
+};
+
+export const initUser = async (newUser: Partial<User>) => {
+  try {
+    const user = await currentUser();
+
+    if (!user) {
+      return redirect("/sign-in");
+    }
+
+    const userData = await db.user.upsert({
+      where: { email: user.emailAddresses[0].emailAddress },
+      update: newUser,
+      create: {
+        id: user?.id,
+        email: user?.emailAddresses[0]?.emailAddress,
+        name: user?.firstName + " " + user?.lastName,
+        avatarUrl: user.imageUrl,
+        role: newUser?.role || "SUBACCOUNT_USER",
+      },
+    });
+
+    await clerkClient.users.updateUserMetadata(user?.id, {
+      privateMetadata: {
+        role: userData?.role || "SUBACCOUNT_USER",
+      },
+    });
+
+    return userData;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const upsertAgency = async (agency: Agency) => {
+  try {
+    if (!agency.companyEmail) {
+      return null;
+    }
+
+    const agencyData = await db.agency.upsert({
+      where: { id: agency.id },
+      update: agency,
+      create: {
+        ...agency,
+        users: {
+          connect: {
+            email: agency?.companyEmail,
+          },
+        },
+        SidebarOption: {
+          create: [
+            {
+              name: "Dashboard",
+              icon: "category",
+              link: `/agency/${agency.id}`,
+            },
+            {
+              name: "Launchpad",
+              icon: "clipboardIcon",
+              link: `/agency/${agency.id}/launchpad`,
+            },
+            {
+              name: "Billing",
+              icon: "payment",
+              link: `/agency/${agency.id}/billing`,
+            },
+            {
+              name: "Settings",
+              icon: "settings",
+              link: `/agency/${agency.id}/settings`,
+            },
+            {
+              name: "Sub Accounts",
+              icon: "person",
+              link: `/agency/${agency.id}/all-subaccounts`,
+            },
+            {
+              name: "Team",
+              icon: "shield",
+              link: `/agency/${agency.id}/team`,
+            },
+          ],
+        },
+      },
+    });
+
+    return agencyData;
+  } catch (error) {
+    console.log(error);
+  }
 };
