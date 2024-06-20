@@ -388,3 +388,41 @@ export const upsertSubAccount = async (subAccount: SubAccount) => {
     console.log(error);
   }
 };
+
+export const updateUser = async (userData: Partial<User>) => {
+  try {
+    const updatedUser = await db.user.update({
+      where:{id:userData?.id},
+      data:userData
+    })
+
+    return updatedUser;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+
+export const getSubAccount = async (id: string) => {
+  try {
+    const subaccount = await db.subAccount.findUnique({
+      where:{id:id}
+    })
+
+    return subaccount;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const deleteSubAccount = async (id: string) => {
+  try {
+    const subaccount = await db.subAccount.delete({
+      where:{id:id}
+    })
+
+    return subaccount;
+  } catch (error) {
+    console.log(error);
+  }
+};
