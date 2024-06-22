@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SubAccount, User } from "@prisma/client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import {
@@ -34,12 +34,22 @@ import {
 } from "../ui/select";
 import { useToast } from "../ui/use-toast";
 import { useRouter } from "next/navigation";
-import { updateUser } from "@/lib/querries";
+import {
+  changeAccountPermissions,
+  generateNotificationLogs,
+  getUserAccountPermissions,
+  getUserAuthDetails,
+  updateUser,
+} from "@/lib/querries";
+import { useModal } from "@/providers/modalProvider";
+import { Switch } from "../ui/switch";
+import { AuthUserWithAgencySigebarOptionsSubAccounts, UsersWithSubAccountPermissions } from "@/lib/types";
+import { Separator } from "../ui/separator";
 
 type Props = {
-  id: string;
+  id?: string;
   type: "agency" | "subaccount";
-  userData: Partial<User>;
+  userData?: Partial<User>;
   subAccounts?: SubAccount[];
 };
 
@@ -57,26 +67,80 @@ const formSchema = z.object({
 
 const UserDetails: React.FC<Props> = ({ userData, type, subAccounts }) => {
   const [roleInfo, setRoleInfo] = useState("");
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
+  const [subAccountPermissions, setSubAccountPermissions] =
+    useState<UsersWithSubAccountPermissions>(null);
+  const [authUserData, setAuthUserData] =
+    useState<AuthUserWithAgencySigebarOptionsSubAccounts | null>(null)
+
+  const { data, setClose } = useModal();
 
   const { toast } = useToast();
   const router = useRouter();
+
+  // show permission in the team side only not user settings ------------
+  useEffect(() => {
+    if (!data?.user) return;
+
+    const getPermissions = async () => {
+      if (!data.user) return;
+      const userData = await getUserAccountPermissions(data?.user?.id);
+      setSubAccountPermissions(userData);
+    };
+    getPermissions();
+  }, [data?.user]);
+
+  useEffect(() => {
+    if (data.user) {
+      const fetchDetails = async () => {
+        const response = await getUserAuthDetails()
+        if (response) setAuthUserData(response)
+      }
+      fetchDetails()
+    }
+  }, [data])
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     mode: "onChange",
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: userData?.name,
-      email: userData?.email,
-      avatarUrl: userData?.avatarUrl,
-      role: userData?.role,
+      name: data?.user?.name ? data?.user?.name : userData?.name,
+      email: data?.user?.email ? data?.user?.email : userData?.email,
+      avatarUrl: data?.user?.avatarUrl
+        ? data?.user?.avatarUrl
+        : userData?.avatarUrl,
+      role: data?.user?.role ? data?.user?.role : userData?.role,
     },
   });
 
+  useEffect(() => {
+    if (data.user) {
+      form.reset(data.user)
+    }
+    if (userData) {
+      form.reset(userData)
+    }
+  }, [userData, data])
+
   const isLoading = form.formState.isSubmitting;
 
-  const onSubmit = async ( values: z.infer<typeof formSchema>) => {
-    if (userData?.id) {
-      const updatedUser = await updateUser({id:userData?.id,...values});
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (userData?.id || data?.user) {
+      const updatedUser = await updateUser({
+        id: data?.user?.id || userData?.id,
+        ...values,
+      });
+
+      // save logs for each sub account id ------
+      authUserData?.Agency?.SubAccount.filter((subacc) =>
+        authUserData?.Permissions.find(
+          (p) => p.subAccountId === subacc.id && p.access
+        )
+      ).forEach(async (subaccount:SubAccount) => {
+        await generateNotificationLogs(`Updated ${authUserData?.name} information`,undefined,subaccount.id)
+      })
+
 
       if (updatedUser) {
         toast({
@@ -84,6 +148,7 @@ const UserDetails: React.FC<Props> = ({ userData, type, subAccounts }) => {
           description: "Update User Information",
         });
         router.refresh();
+        setClose();
       } else {
         toast({
           variant: "destructive",
@@ -95,6 +160,79 @@ const UserDetails: React.FC<Props> = ({ userData, type, subAccounts }) => {
       console.log("Error could not submit");
     }
     router.refresh();
+  };
+
+  const ChangePermissions = async (
+    value: boolean,
+    permissionId: string,
+    subAccountId: string
+  ) => {
+    try {
+      if (!data?.user) {
+        return null;
+      }
+      setLoadingPermissions(true);
+      const response = await changeAccountPermissions(
+        permissionId,
+        value,
+        data?.user?.email,
+        subAccountId
+      );
+
+      await generateNotificationLogs(
+        `Gave ${data?.user?.name} access to | ${
+          subAccountPermissions?.Permissions.find(
+            (p) => p.subAccountId === subAccountId
+          )?.SubAccount.name
+        } `,
+        data?.user?.agencyId as string,
+        subAccountPermissions?.Permissions.find(
+          (p) => p.subAccountId === subAccountId
+        )?.SubAccount.id
+      );
+
+      if (response) {
+        toast({
+          title: "Success",
+          description: "The request was successfull",
+        });
+
+        if (subAccountPermissions) {
+          // update the subaccount permission
+
+          setSubAccountPermissions((prev)=>{
+            let oldPermissions = prev?.Permissions;
+            let perm = oldPermissions?.find((perm) => (perm.subAccountId === subAccountId))
+            if(perm){
+              perm.access = value;
+            }
+
+            return {...prev,Permissions:oldPermissions}
+          })
+
+          subAccountPermissions.Permissions.find((perm) => {
+            if (perm.subAccountId === subAccountId) {
+              return { ...perm, access: !perm.access };
+            }
+            return perm;
+          });
+        }
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed",
+          description: "Could not update permissions",
+        });
+      }
+      router.refresh();
+      setLoadingPermissions(false);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Failed",
+        description: "Could not update permissions",
+      });
+    }
   };
 
   return (
@@ -191,7 +329,8 @@ const UserDetails: React.FC<Props> = ({ userData, type, subAccounts }) => {
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="AGENCY_ADMIN">Agency Admin</SelectItem>
-                      {userData?.role === "AGENCY_OWNER" && (
+                      {(data?.user?.role === "AGENCY_OWNER" ||
+                        userData?.role === "AGENCY_OWNER") && (
                         <SelectItem value="AGENCY_OWNER">
                           Agency Owner
                         </SelectItem>
@@ -212,6 +351,44 @@ const UserDetails: React.FC<Props> = ({ userData, type, subAccounts }) => {
             <Button type="submit" disabled={isLoading}>
               {isLoading ? <Loading /> : "Save User Information"}
             </Button>
+
+            {(data?.user?.role === "AGENCY_OWNER" ||
+              userData?.role === "AGENCY_OWNER") && (
+                <div>
+                <Separator className="my-4" />
+                <FormLabel> User Permissions</FormLabel>
+                <FormDescription className="mb-4">
+                  You can give Sub Account access to team member by turning on
+                  access control for each Sub Account. This is only visible to
+                  agency owners
+                </FormDescription>
+
+                <div className="flex flex-col gap-4">
+                  {subAccounts?.map((account) => {
+                    const accountPermission =
+                    subAccountPermissions?.Permissions.find(
+                      (p) => p.subAccountId === account.id
+                    )
+
+                    return (
+                      <div
+                        key={account?.id}
+                        className="flex items-center justify-between w-full p-2 py-4 border rounded-md"
+                      >
+                        {account?.name}
+                        <Switch
+                          disabled={loadingPermissions}
+                          checked={accountPermission?.access}
+                          onCheckedChange={(e) => {
+                            ChangePermissions(e, accountPermission?.id as string,account?.id);
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </form>
         </Form>
       </CardContent>

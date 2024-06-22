@@ -318,11 +318,11 @@ export const upsertSubAccount = async (subAccount: SubAccount) => {
     }
 
     const agencyOwner = await db.user.findFirst({
-      where:{agencyId:subAccount?.agencyId,role:"AGENCY_OWNER"}
-    })
+      where: { agencyId: subAccount?.agencyId, role: "AGENCY_OWNER" },
+    });
 
-    if(!agencyOwner){
-      return console.log("Error could not create subaccount")
+    if (!agencyOwner) {
+      return console.log("Error could not create subaccount");
     }
 
     const accountData = await db.subAccount.upsert({
@@ -330,52 +330,52 @@ export const upsertSubAccount = async (subAccount: SubAccount) => {
       update: subAccount,
       create: {
         ...subAccount,
-        Permissions:{
-          create:{
-            access:true,
-            email: agencyOwner?.email
+        Permissions: {
+          create: {
+            access: true,
+            email: agencyOwner?.email,
           },
         },
         SidebarOption: {
           create: [
             {
-              name: 'Launchpad',
-              icon: 'clipboardIcon',
+              name: "Launchpad",
+              icon: "clipboardIcon",
               link: `/subaccount/${subAccount.id}/launchpad`,
             },
             {
-              name: 'Settings',
-              icon: 'settings',
+              name: "Settings",
+              icon: "settings",
               link: `/subaccount/${subAccount.id}/settings`,
             },
             {
-              name: 'Funnels',
-              icon: 'pipelines',
+              name: "Funnels",
+              icon: "pipelines",
               link: `/subaccount/${subAccount.id}/funnels`,
             },
             {
-              name: 'Media',
-              icon: 'database',
+              name: "Media",
+              icon: "database",
               link: `/subaccount/${subAccount.id}/media`,
             },
             {
-              name: 'Automations',
-              icon: 'chip',
+              name: "Automations",
+              icon: "chip",
               link: `/subaccount/${subAccount.id}/automations`,
             },
             {
-              name: 'Pipelines',
-              icon: 'flag',
+              name: "Pipelines",
+              icon: "flag",
               link: `/subaccount/${subAccount.id}/pipelines`,
             },
             {
-              name: 'Contacts',
-              icon: 'person',
+              name: "Contacts",
+              icon: "person",
               link: `/subaccount/${subAccount.id}/contacts`,
             },
             {
-              name: 'Dashboard',
-              icon: 'category',
+              name: "Dashboard",
+              icon: "category",
               link: `/subaccount/${subAccount.id}`,
             },
           ],
@@ -392,9 +392,9 @@ export const upsertSubAccount = async (subAccount: SubAccount) => {
 export const updateUser = async (userData: Partial<User>) => {
   try {
     const updatedUser = await db.user.update({
-      where:{id:userData?.id},
-      data:userData
-    })
+      where: { id: userData?.id },
+      data: userData,
+    });
 
     return updatedUser;
   } catch (error) {
@@ -402,12 +402,11 @@ export const updateUser = async (userData: Partial<User>) => {
   }
 };
 
-
 export const getSubAccount = async (id: string) => {
   try {
     const subaccount = await db.subAccount.findUnique({
-      where:{id:id}
-    })
+      where: { id: id },
+    });
 
     return subaccount;
   } catch (error) {
@@ -418,10 +417,85 @@ export const getSubAccount = async (id: string) => {
 export const deleteSubAccount = async (id: string) => {
   try {
     const subaccount = await db.subAccount.delete({
-      where:{id:id}
-    })
+      where: { id: id },
+    });
 
     return subaccount;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const deleteUser = async (id: string) => {
+  try {
+    const user = await db.user.delete({
+      where: { id: id },
+    });
+
+    return user;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getUser = async (id: string) => {
+  const user = await db.user.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  return user;
+};
+
+export const getUserAccountPermissions = async (id: string) => {
+  try {
+    const user = await db.user.findUnique({
+      where: { id: id },
+      include: {
+        Permissions: {
+          include:{
+            SubAccount:true
+          }
+        }
+      },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return user;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const changeAccountPermissions = async (
+  permissionId: string,
+  value: boolean,
+  email:string, 
+  subaccountId:string
+) => {
+  try {
+    const permission = await db.permissions.upsert({
+      where: {
+        id: permissionId
+      },
+      update:{access:value},
+      create:{
+        id:permissionId,
+        email,
+        subAccountId:subaccountId,
+        access:value
+      }
+    });
+
+    if (!permission) {
+      return null;
+    }
+
+    return permission;
   } catch (error) {
     console.log(error);
   }

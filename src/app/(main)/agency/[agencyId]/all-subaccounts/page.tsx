@@ -42,7 +42,7 @@ const page = async ({ params }: Props) => {
       <div className="flex flex-col w-full gap-4 items-end">
         <CreateSubAccount
           user={user}
-          className="w-[200px] self-end m-6"
+          className="w-[200px] mb-6"
         />
         <Command className="rounded-lg bg-transparent border-none">
           <CommandInput placeholder="Search Account..." />
