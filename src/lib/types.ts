@@ -1,6 +1,7 @@
-import { Notification, Prisma, Role } from "@prisma/client";
+import { Contact, Lane, Notification, Prisma, Role, Tag, Ticket, User } from "@prisma/client";
 import { db } from "./db";
 import { getAccountMedia, getUserAccountPermissions, getUserAuthDetails } from "./querries";
+import { z } from "zod";
 
 export type NotificationWithUser = ({
   User: {
@@ -49,3 +50,17 @@ export type UsersWithAgencySubAccountPermissionsSidebarOptions =
   Prisma.PromiseReturnType<
     typeof getAccountMedia
   >
+
+  // export type TicketsAndTags = Ticket & {
+  //   Tags: Tag[],
+  //   Assigned: User | null,
+  //   Customer: Contact | null
+  // }
+
+  // export type LaneDetails  = Lane & {
+  //   Tickets : TicketsAndTags
+  // }
+
+  export const CreatePipelineFormSchema = z.object({
+    name: z.string().min(1)
+  })

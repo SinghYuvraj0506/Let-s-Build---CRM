@@ -4,6 +4,7 @@ import { clerkClient, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "./db";
 import { Agency, Role, SubAccount, User } from "@prisma/client";
+import { v4 } from "uuid";
 
 export const getUserAuthDetails = async () => {
   const authUser = await currentUser();
@@ -379,6 +380,11 @@ export const upsertSubAccount = async (subAccount: SubAccount) => {
             },
           ],
         },
+        Pipeline: {
+          create: {
+            name: "Lead Cycle",
+          },
+        },
       },
     });
 
@@ -453,10 +459,10 @@ export const getUserAccountPermissions = async (id: string) => {
       where: { id: id },
       include: {
         Permissions: {
-          include:{
-            SubAccount:true
-          }
-        }
+          include: {
+            SubAccount: true,
+          },
+        },
       },
     });
 
@@ -473,21 +479,21 @@ export const getUserAccountPermissions = async (id: string) => {
 export const changeAccountPermissions = async (
   permissionId: string,
   value: boolean,
-  email:string, 
-  subaccountId:string
+  email: string,
+  subaccountId: string
 ) => {
   try {
     const permission = await db.permissions.upsert({
       where: {
-        id: permissionId
+        id: permissionId,
       },
-      update:{access:value},
-      create:{
-        id:permissionId,
+      update: { access: value },
+      create: {
+        id: permissionId,
         email,
-        subAccountId:subaccountId,
-        access:value
-      }
+        subAccountId: subaccountId,
+        access: value,
+      },
     });
 
     if (!permission) {
@@ -500,78 +506,149 @@ export const changeAccountPermissions = async (
   }
 };
 
-export const sendInvitation = async (role:Role, email:string, agencyId:string) => {
+export const sendInvitation = async (
+  role: Role,
+  email: string,
+  agencyId: string
+) => {
   try {
-
     const response = await db.invitation.create({
       data: { email, agencyId, role },
-    })
-  
-
+    });
 
     const invitation = await clerkClient.invitations.createInvitation({
-      emailAddress:email,
-      redirectUrl:process.env.NEXT_PUBLIC_URL,
-      publicMetadata:{
-        throughInvitation:true,
-        role
-      }
-    })
+      emailAddress: email,
+      redirectUrl: process.env.NEXT_PUBLIC_URL,
+      publicMetadata: {
+        throughInvitation: true,
+        role,
+      },
+    });
 
     return response;
-    
   } catch (error) {
-    console.log(error)
+    console.log(error);
     throw error;
   }
-}
+};
 
-
-export const getAccountMedia = async (id:string) => {
+export const getAccountMedia = async (id: string) => {
   try {
-
     const response = await db.subAccount.findUnique({
-      where:{id:id},
-      include:{
-        Media:true
-      }
-    })
-  
-    return response;
-    
-  } catch (error) {
-    console.log(error)
-  }
-}
+      where: { id: id },
+      include: {
+        Media: true,
+      },
+    });
 
-export const createAccountMedia = async (subaccountId:string,name:string,link:string) => {
+    return response;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const createAccountMedia = async (
+  subaccountId: string,
+  name: string,
+  link: string
+) => {
   try {
     const response = await db.media.create({
-      data:{
+      data: {
         name,
         link,
-        subAccountId:subaccountId
-      }
-    })
-  
-    return response;
-    
-  } catch (error) {
-    console.log(error)
-  }
-}
+        subAccountId: subaccountId,
+      },
+    });
 
-export const deleteMedia = async (id:string) => {
+    return response;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const deleteMedia = async (id: string) => {
   try {
     const response = await db.media.delete({
-      where:{
-        id:id
-      }
-    })
-  
+      where: {
+        id: id,
+      },
+    });
+
     return response;
-    
   } catch (error) {
-    console.log(error)
+    console.log(error);
   }
-}
+};
+
+export const getPipelineDetails = async (id: string) => {
+  try {
+    const response = await db.pipeline.findUnique({
+      where: { id: id },
+    });
+
+    return response;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getLanesWithTicketsAndTags = async (id: string) => {
+  try {
+    const response = await db.lane.findMany({
+      where: { pipelineId: id },
+      orderBy: { order: "asc" },
+      include: {
+        Tickets: {
+          orderBy: { order: "asc" },
+          include: {
+            Tags: true,
+            Assigned: true,
+            Customer: true,
+          },
+        },
+      },
+    });
+
+    return response;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const upsertPipeline = async (
+  subAccountId: string,
+  id: string,
+  name: string
+) => {
+  try {
+    const response = await db.pipeline.upsert({
+      where: { id: id || v4() },
+      update: {
+        name: name,
+      },
+      create: {
+        subAccountId,
+        name,
+      },
+    });
+
+    return response;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const deletePipeline = async (
+  id: string,
+) => {
+  try {
+    const response = await db.pipeline.delete({
+      where: { id: id}
+    });
+
+    return response;
+  } catch (error) {
+    console.log(error);
+  }
+};

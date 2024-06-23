@@ -1,5 +1,5 @@
-import React from 'react'
 
+import React from 'react'
 
 type Props = {
     params: {
@@ -8,7 +8,9 @@ type Props = {
   };
 
   
-const page = () => {
+const page = async ({params}:Props) => {
+
+
   return (
     <div>page</div>
   )
