@@ -45,6 +45,7 @@ import { useModal } from "@/providers/modalProvider";
 import { Switch } from "../ui/switch";
 import { AuthUserWithAgencySigebarOptionsSubAccounts, UsersWithSubAccountPermissions } from "@/lib/types";
 import { Separator } from "../ui/separator";
+import { v4 } from "uuid";
 
 type Props = {
   id?: string;
@@ -138,7 +139,7 @@ const UserDetails: React.FC<Props> = ({ userData, type, subAccounts }) => {
           (p) => p.subAccountId === subacc.id && p.access
         )
       ).forEach(async (subaccount:SubAccount) => {
-        await generateNotificationLogs(`Updated ${authUserData?.name} information`,undefined,subaccount.id)
+        await generateNotificationLogs(`Updated ${data?.user?.name ?? userData?.name} information`,undefined,subaccount.id)
       })
 
 
@@ -173,7 +174,7 @@ const UserDetails: React.FC<Props> = ({ userData, type, subAccounts }) => {
       }
       setLoadingPermissions(true);
       const response = await changeAccountPermissions(
-        permissionId,
+        permissionId || v4(),
         value,
         data?.user?.email,
         subAccountId
@@ -183,7 +184,7 @@ const UserDetails: React.FC<Props> = ({ userData, type, subAccounts }) => {
         `Gave ${data?.user?.name} access to | ${
           subAccountPermissions?.Permissions.find(
             (p) => p.subAccountId === subAccountId
-          )?.SubAccount.name
+          )?.SubAccount?.name
         } `,
         data?.user?.agencyId as string,
         subAccountPermissions?.Permissions.find(
@@ -352,8 +353,7 @@ const UserDetails: React.FC<Props> = ({ userData, type, subAccounts }) => {
               {isLoading ? <Loading /> : "Save User Information"}
             </Button>
 
-            {(data?.user?.role === "AGENCY_OWNER" ||
-              userData?.role === "AGENCY_OWNER") && (
+            {authUserData?.role === "AGENCY_OWNER" && (
                 <div>
                 <Separator className="my-4" />
                 <FormLabel> User Permissions</FormLabel>

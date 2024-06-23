@@ -28,7 +28,7 @@ const page = async ({params}:Props) => {
   if(!agencyDetails) return null
 
   return (
-    <div className='flex flex-col gap-4'>
+    <div className='flex lg:!flex-row flex-col gap-4'>
       <AgencyDetails data={agencyDetails}/>
       <UserDetails id={userDetails?.id} type='agency' userData={userDetails}/>
     </div>

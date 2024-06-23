@@ -3,8 +3,7 @@
 import { clerkClient, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "./db";
-import { Agency, SubAccount, User } from "@prisma/client";
-import { connect } from "http2";
+import { Agency, Role, SubAccount, User } from "@prisma/client";
 
 export const getUserAuthDetails = async () => {
   const authUser = await currentUser();
@@ -500,3 +499,79 @@ export const changeAccountPermissions = async (
     console.log(error);
   }
 };
+
+export const sendInvitation = async (role:Role, email:string, agencyId:string) => {
+  try {
+
+    const response = await db.invitation.create({
+      data: { email, agencyId, role },
+    })
+  
+
+
+    const invitation = await clerkClient.invitations.createInvitation({
+      emailAddress:email,
+      redirectUrl:process.env.NEXT_PUBLIC_URL,
+      publicMetadata:{
+        throughInvitation:true,
+        role
+      }
+    })
+
+    return response;
+    
+  } catch (error) {
+    console.log(error)
+    throw error;
+  }
+}
+
+
+export const getAccountMedia = async (id:string) => {
+  try {
+
+    const response = await db.subAccount.findUnique({
+      where:{id:id},
+      include:{
+        Media:true
+      }
+    })
+  
+    return response;
+    
+  } catch (error) {
+    console.log(error)
+  }
+}
+
+export const createAccountMedia = async (subaccountId:string,name:string,link:string) => {
+  try {
+    const response = await db.media.create({
+      data:{
+        name,
+        link,
+        subAccountId:subaccountId
+      }
+    })
+  
+    return response;
+    
+  } catch (error) {
+    console.log(error)
+  }
+}
+
+export const deleteMedia = async (id:string) => {
+  try {
+    const response = await db.media.delete({
+      where:{
+        id:id
+      }
+    })
+  
+    return response;
+    
+  } catch (error) {
+    console.log(error)
+  }
+}

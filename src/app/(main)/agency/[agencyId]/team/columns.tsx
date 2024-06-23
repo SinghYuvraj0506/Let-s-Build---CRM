@@ -195,7 +195,7 @@ const CellActions = ({ rowData }: CellActionProps) => {
           </DropdownMenuItem>
           {(rowData?.role as string) !== "AGENCY_OWNER" && (
             <AlertDialogTrigger asChild>
-              <DropdownMenuItem className="flex gap-2" onClick={() => {}}>
+              <DropdownMenuItem className="flex gap-2">
                 <Trash size={15} /> Remove User
               </DropdownMenuItem>
             </AlertDialogTrigger>

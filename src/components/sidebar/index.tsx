@@ -36,10 +36,10 @@ const Sidebar = async ({ id, type }: Props) => {
       : user.Agency.SubAccount.find((subaccount) => subaccount.id === id)
           ?.SidebarOption || [];
 
-  // users having access to all the subaccounts ------------
+  // users having access to other subaccounts ------------
   const subAccounts = user?.Agency.SubAccount.filter((subaacount) =>
-    user?.Permissions.find((permisson) => {
-      permisson.subAccountId === subaacount.id && permisson.access;
+    user?.Permissions.some((permisson) => {
+      return permisson.subAccountId === subaacount.id && permisson.access;
     })
   );
 

@@ -72,6 +72,7 @@ export function DataTable<TData, TValue>({
               </CustomModal>
             );
           }}
+          className="flex items-center gap-2 "
         >
           {actionButtonText}
         </Button>

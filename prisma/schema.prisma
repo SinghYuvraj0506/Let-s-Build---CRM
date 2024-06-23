@@ -128,8 +128,8 @@ model SubAccount {
   Agency           Agency                    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   Permissions      Permissions[]
   SidebarOption    SubAccountSidebarOption[]
+  Media            Media[]
   // Funnels          Funnel[]
-  // Media            Media[]
   // Contact          Contact[]
   // Trigger          Trigger[]
   // Automation       Automation[]
@@ -194,4 +194,18 @@ model Notification {
   @@index([agencyId])
   @@index([subAccountId])
   @@index([userId])
+}
+
+
+model Media {
+  id           String     @id @default(uuid())
+  type         String?
+  name         String
+  link         String     @unique
+  subAccountId String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  Subaccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+
+  @@index([subAccountId])
 }
