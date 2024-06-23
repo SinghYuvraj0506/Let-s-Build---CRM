@@ -33,12 +33,12 @@ const MediaComponent = ({ data, subaccountId }: Props) => {
         <CommandList className="pb-20 max-h-full">
           <CommandEmpty>No files found.</CommandEmpty>
           <CommandGroup heading="Media Files">
-          <div className="flex flex-wrap gap-4 pt-4">
+            <div className="flex flex-wrap gap-4 pt-4">
               {data?.Media?.map((file) => (
-                 <CommandItem
-                 key={file.id}
-                 className="p-0 max-w-[300px] w-full rounded-lg !bg-transparent !font-medium !text-white"
-               >
+                <CommandItem
+                  key={file.id}
+                  className="p-0 max-w-[300px] w-full rounded-lg !bg-transparent !font-medium !text-white"
+                >
                   <MediaCard file={file} />
                 </CommandItem>
               ))}

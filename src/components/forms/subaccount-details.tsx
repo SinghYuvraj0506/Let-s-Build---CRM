@@ -51,7 +51,7 @@ const formSchema = z.object({
 
 interface SubAccountDetailsProps {
   //To add the sub account to the agency
-  agencyDetails: Agency;
+  agencyDetails?: Agency;
   details?: Partial<SubAccount>;
   userId: string;
   userName: string;
@@ -96,7 +96,7 @@ const SubAccountDetails: React.FC<SubAccountDetailsProps> = ({
         createdAt: new Date(),
         updatedAt: new Date(),
         companyEmail: values.companyEmail,
-        agencyId: agencyDetails.id,
+        agencyId: details?.agencyId ?? agencyDetails?.id as string,
         connectAccountId: "",
         goal: 5000,
       });
